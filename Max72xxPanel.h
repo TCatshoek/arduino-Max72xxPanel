@@ -28,6 +28,8 @@
   #include "pins_arduino.h"
 #endif
 
+#include <SPI.h>
+
 class Max72xxPanel : public Adafruit_GFX {
 
 public:
@@ -40,6 +42,22 @@ public:
    * vDisplays  number of displays vertically
    */
   Max72xxPanel(byte csPin, byte hDisplays=1, byte vDisplays=1);
+
+    /*
+   * Create a new controler
+   * Parameters:
+   * sck        spi clock
+   * miso       unused, but needed for spi begin
+   * mosi       spi data out
+   * csPin		  pin for selecting the device
+   * hDisplays  number of displays horizontally
+   * vDisplays  number of displays vertically
+   */
+  Max72xxPanel(
+    byte sck, byte miso,
+    byte mosi, byte csPin, 
+    SPIClass* _spi,
+    byte hDisplays, byte vDisplays);
 
 	/*
 	 * Define how the displays are ordered. The first display (0)
@@ -99,6 +117,8 @@ public:
    */
   void write();
 
+  
+
 private:
   byte SPI_CS; /* SPI chip selection */
 
@@ -112,6 +132,10 @@ private:
   byte hDisplays;
   byte *matrixPosition;
   byte *matrixRotation;
+
+  SPIClass* spi;
+
+  void initDisplay();
 };
 
 #endif	// Max72xxPanel_h

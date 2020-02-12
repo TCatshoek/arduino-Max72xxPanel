@@ -36,43 +36,79 @@
 
 Max72xxPanel::Max72xxPanel(byte csPin, byte hDisplays, byte vDisplays) : Adafruit_GFX(hDisplays << 3, vDisplays << 3) {
 
-  Max72xxPanel::SPI_CS = csPin;
+	Max72xxPanel::SPI_CS = csPin;
 
-  byte displays = hDisplays * vDisplays;
-  Max72xxPanel::hDisplays = hDisplays;
+	byte displays = hDisplays * vDisplays;
+	Max72xxPanel::hDisplays = hDisplays;
 	Max72xxPanel::bitmapSize = displays << 3;
 
-  Max72xxPanel::bitmap = (byte*)malloc(bitmapSize);
-  Max72xxPanel::matrixRotation = (byte*)malloc(displays);
-  Max72xxPanel::matrixPosition = (byte*)malloc(displays);
+	Max72xxPanel::bitmap = (byte*)malloc(bitmapSize);
+	Max72xxPanel::matrixRotation = (byte*)malloc(displays);
+	Max72xxPanel::matrixPosition = (byte*)malloc(displays);
 
-  for ( byte display = 0; display < displays; display++ ) {
-  	matrixPosition[display] = display;
-  	matrixRotation[display] = 0;
-  }
+	for ( byte display = 0; display < displays; display++ ) {
+	matrixPosition[display] = display;
+	matrixRotation[display] = 0;
+	}
 
-  SPI.begin();
-//SPI.setBitOrder(MSBFIRST);
-//SPI.setDataMode(SPI_MODE0);
-  pinMode(SPI_CS, OUTPUT);
+	spi = &SPI;
+	spi->begin();
 
-  // Clear the screen
-  fillScreen(0);
+	initDisplay();
+}
 
-  // Make sure we are not in test mode
-  spiTransfer(OP_DISPLAYTEST, 0);
+Max72xxPanel::Max72xxPanel (
+	byte sck, byte miso,
+	byte mosi, byte csPin, 
+	SPIClass* _spi,
+	byte hDisplays=1, byte vDisplays=1) : Adafruit_GFX(hDisplays << 3, vDisplays << 3) {
 
-  // We need the multiplexer to scan all segments
-  spiTransfer(OP_SCANLIMIT, 7);
 
-  // We don't want the multiplexer to decode segments for us
-  spiTransfer(OP_DECODEMODE, 0);
+	Max72xxPanel::SPI_CS = csPin;
 
-  // Enable display
-  shutdown(false);
+	byte displays = hDisplays * vDisplays;
+	Max72xxPanel::hDisplays = hDisplays;
+	Max72xxPanel::bitmapSize = displays << 3;
 
-  // Set the brightness to a medium value
-  setIntensity(7);
+	Max72xxPanel::bitmap = (byte*)malloc(bitmapSize);
+	Max72xxPanel::matrixRotation = (byte*)malloc(displays);
+	Max72xxPanel::matrixPosition = (byte*)malloc(displays);
+
+	for ( byte display = 0; display < displays; display++ ) {
+	matrixPosition[display] = display;
+	matrixRotation[display] = 0;
+	}
+
+	spi = _spi;
+	spi->begin(sck, miso, mosi, csPin);
+
+	initDisplay();
+}
+
+void Max72xxPanel::initDisplay() {
+	//SPI.setBitOrder(MSBFIRST);
+
+	spi->setDataMode(SPI_MODE0);
+	//spi->setClockDivider(SPI_CLOCK_DIV128);
+	pinMode(SPI_CS, OUTPUT);
+
+	// Clear the screen
+	fillScreen(0);
+
+	// Make sure we are not in test mode
+	spiTransfer(OP_DISPLAYTEST, 0);
+
+	// We need the multiplexer to scan all segments
+	spiTransfer(OP_SCANLIMIT, 7);
+
+	// We don't want the multiplexer to decode segments for us
+	spiTransfer(OP_DECODEMODE, 0);
+
+	// Enable display
+	shutdown(false);
+
+	// Set the brightness to a medium value
+	setIntensity(7);
 }
 
 void Max72xxPanel::setPosition(byte display, byte x, byte y) {
@@ -185,8 +221,8 @@ void Max72xxPanel::spiTransfer(byte opcode, byte data) {
 	byte start = bitmapSize + end;
 	do {
 		start -= 8;
-		SPI.transfer(opcode);
-		SPI.transfer(opcode <= OP_DIGIT7 ? bitmap[start] : data);
+		spi->transfer(opcode);
+		spi->transfer(opcode <= OP_DIGIT7 ? bitmap[start] : data);
 	}
 	while ( start > end );
 
